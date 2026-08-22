@@ -10,14 +10,6 @@ use crate::honkai::config::Config;
 pub enum LauncherState {
     Launch,
 
-    PatchNotVerified,
-    PatchBroken,
-    PatchUnsafe,
-    PatchConcerning,
-
-    PatchNotInstalled,
-    PatchUpdateAvailable,
-
     TelemetryNotDisabled,
 
     #[cfg(feature = "components")]
@@ -36,8 +28,7 @@ pub enum LauncherState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StateUpdating {
-    Game,
-    Patch
+    Game
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,8 +37,6 @@ pub struct LauncherStateParams<F: Fn(StateUpdating)> {
 
     pub game_path: PathBuf,
     pub game_edition: GameEdition,
-
-    pub patch_folder: PathBuf,
 
     pub status_updater: F
 }
@@ -91,22 +80,7 @@ impl LauncherState {
         let diff = game.try_get_diff()?;
 
         match diff {
-            VersionDiff::Latest(version) => {
-                // Check game patch status
-                (params.status_updater)(StateUpdating::Patch);
-
-                // Check jadeite patch status
-                if !jadeite::is_installed(&params.patch_folder) {
-                    return Ok(Self::PatchNotInstalled);
-                }
-
-                // Fetch patch metadata
-                let metadata = jadeite::get_metadata()?;
-
-                if metadata.jadeite.version > jadeite::get_version(params.patch_folder)? {
-                    return Ok(Self::PatchUpdateAvailable);
-                }
-
+            VersionDiff::Latest(_) => {
                 // Check telemetry servers
                 let disabled = telemetry::is_disabled(params.game_edition)
 
@@ -125,13 +99,7 @@ impl LauncherState {
                     return Ok(Self::TelemetryNotDisabled);
                 }
 
-                match metadata.games.hi3rd.global.get_status(version) {
-                    JadeitePatchStatusVariant::Verified   => Ok(Self::Launch),
-                    JadeitePatchStatusVariant::Unverified => Ok(Self::PatchNotVerified),
-                    JadeitePatchStatusVariant::Broken     => Ok(Self::PatchBroken),
-                    JadeitePatchStatusVariant::Unsafe     => Ok(Self::PatchUnsafe),
-                    JadeitePatchStatusVariant::Concerning => Ok(Self::PatchConcerning)
-                }
+                Ok(Self::Launch)
             }
 
             VersionDiff::Diff { .. } => Ok(Self::GameUpdateAvailable(diff)),
@@ -160,8 +128,6 @@ impl LauncherState {
 
             game_path: config.game.path.for_edition(config.launcher.edition).to_path_buf(),
             game_edition: config.launcher.edition,
-
-            patch_folder: config.patch.path,
 
             status_updater
         })

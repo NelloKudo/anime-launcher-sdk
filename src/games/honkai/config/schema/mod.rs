@@ -12,7 +12,6 @@ use crate::components::{
 
 pub mod launcher;
 pub mod game;
-pub mod patch;
 
 #[cfg(feature = "components")]
 pub mod components;
@@ -21,7 +20,6 @@ pub mod prelude {
     pub use super::launcher::prelude::*;
     pub use super::game::prelude::*;
     pub use super::game::*;
-    pub use super::patch::*;
 
     #[cfg(feature = "components")]
     pub use super::components::*;
@@ -38,9 +36,7 @@ pub struct Schema {
     pub sandbox: Sandbox,
 
     #[cfg(feature = "components")]
-    pub components: Components,
-
-    pub patch: Patch
+    pub components: Components
 }
 
 impl From<&JsonValue> for Schema {
@@ -68,12 +64,7 @@ impl From<&JsonValue> for Schema {
             components: match value.get("components") {
                 Some(value) => Components::from(value),
                 None => default.components
-            },
-
-            patch: match value.get("patch") {
-                Some(value) => Patch::from(value),
-                None => default.patch
-            },
+            }
         }
     }
 }
